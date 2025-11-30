@@ -18,6 +18,17 @@ services:
     networks:
       - cassandra_network
 
+  app:
+    build: .
+    container_name: fastapi_app
+    ports:
+      - "8000:8000"
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    networks:
+      - cassandra_network
+
 volumes:
   cassandra_data:
     driver: local
