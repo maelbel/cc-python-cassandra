@@ -9,7 +9,7 @@ from ..config.database import Database
 
 SECRET_KEY = "your-secret-key" 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
 
