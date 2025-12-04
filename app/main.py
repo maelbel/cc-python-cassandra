@@ -26,8 +26,8 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
-
 @app.get("/", summary="Root endpoint", description="Returns a simple hello world message", tags=["Default"])
 def read_root():
     return {"Hello": "World"}
+
+app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
