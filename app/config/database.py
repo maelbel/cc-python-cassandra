@@ -67,6 +67,23 @@ class Database:
         CREATE INDEX IF NOT EXISTS users_email_idx ON users (email);
         """
         session.execute(email_index_query)
+        
+        # Create projects table
+        project_table_query = """
+        CREATE TABLE IF NOT EXISTS projects (
+            p_id text PRIMARY KEY,
+            p_name text,
+            p_head text
+        );
+        """
+        session.execute(project_table_query)
+
+        # Create index on project name for faster lookups
+        project_name_index_query = """
+        CREATE INDEX IF NOT EXISTS projects_p_name_idx ON projects (p_name);
+        """
+        session.execute(project_name_index_query)
+
         print("Tables created")
 
     def get_session(self):
