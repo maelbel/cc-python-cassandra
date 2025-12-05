@@ -4,13 +4,8 @@ title() {
 	echo -e "\n- $1" | tr '[:lower:]' '[:upper:]'
 }
 
-title "install dependencies"
-pip install -r requirements.txt
-
 title "docker"
 docker compose up -d
 
 title "status docker"
 docker ps
-
-fastapi dev main.py

@@ -2,16 +2,9 @@
 
 This project demonstrates how to integrate Apache Cassandra with FastAPI.
 
-## Installation
+## Installation & Running the Application
 
-1. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## Running the Application
-
-Start the FastAPI server:
+1. All you need to do is this command:
 ```bash
 ./start
 ```
