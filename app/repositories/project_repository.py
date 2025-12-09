@@ -43,6 +43,9 @@ class ProjectRepository:
         return self.get_project(p_id)
 
     def delete_project(self, p_id: str) -> bool:
+        existing = self.get_project(p_id)
+        if not existing:
+            return False
         query = SimpleStatement("DELETE FROM projects WHERE p_id = %s")
         self._get_session().execute(query, (p_id,))
         return True
