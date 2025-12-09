@@ -24,19 +24,21 @@ class ProjectRepository:
         return Project(p_id=project_id, p_name=project.p_name, p_head=project.p_head)
 
     def update_project(self, p_id: str, project: ProjectUpdate) -> Optional[Project]:
-        sets = []
-        params = []
+        allowed_columns = {"p_name", "p_head"}
+        pairs = []
         if project.p_name is not None:
-            sets.append("p_name = %s")
-            params.append(project.p_name)
+            pairs.append(("p_name", project.p_name))
         if project.p_head is not None:
-            sets.append("p_head = %s")
-            params.append(project.p_head)
-        if not sets:
+            pairs.append(("p_head", project.p_head))
+        if not pairs:
             return None
-        set_clause = ", ".join(sets)
-        query = SimpleStatement(f"UPDATE projects SET {set_clause} WHERE p_id = %s")
+        for col, _ in pairs:
+            if col not in allowed_columns:
+                raise ValueError(f"Invalid column name: {col}")
+        set_clause = ", ".join(f"{col} = %s" for col, _ in pairs)
+        params = [val for _, val in pairs]
         params.append(p_id)
+        query = SimpleStatement("UPDATE projects SET " + set_clause + " WHERE p_id = %s")
         self._get_session().execute(query, tuple(params))
         return self.get_project(p_id)
 
