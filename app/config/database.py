@@ -67,6 +67,23 @@ class Database:
         CREATE INDEX IF NOT EXISTS users_email_idx ON users (email);
         """
         session.execute(email_index_query)
+        # Create students table
+        student_table_query = """
+        CREATE TABLE IF NOT EXISTS students (
+            s_id text PRIMARY KEY,
+            s_name text,
+            s_course text,
+            s_branch text
+        );
+        """
+        session.execute(student_table_query)
+
+        # Index on student name
+        student_name_index = """
+        CREATE INDEX IF NOT EXISTS students_name_idx ON students (s_name);
+        """
+        session.execute(student_name_index)
+
         print("Tables created")
 
     def get_session(self):
