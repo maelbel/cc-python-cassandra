@@ -5,6 +5,7 @@ from fastapi import FastAPI
 
 from .config.database import Database
 from .controllers.auth_controller import router as auth_router
+from .controllers.project_controller import router as project_router
 from .controllers.student_controller import router as student_router
 
 db = None
@@ -32,4 +33,5 @@ def read_root():
     return {"Hello": "World"}
 
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
+app.include_router(project_router, prefix="/projects", tags=["Projects"])
 app.include_router(student_router, prefix="/students", tags=["Students"])
