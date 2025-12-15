@@ -1,7 +1,7 @@
 from ..repositories.student_repository import StudentRepository
 from ..config.database import Database
 from ..entities.student import StudentCreate, StudentUpdate, Student
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 class StudentService:
     def __init__(self, db: Database):
@@ -19,5 +19,5 @@ class StudentService:
     def get_student(self, s_id: str) -> Optional[Student]:
         return self.repo.get_student(s_id)
 
-    def list_students(self) -> List[Student]:
-        return self.repo.list_students()
+    def list_students(self, page: int = 1, size: int = 10, q: str | None = None, project_id: str | None = None) -> Tuple[List[Student], int]:
+        return self.repo.list_students(page=page, size=size, q=q, project_id=project_id)

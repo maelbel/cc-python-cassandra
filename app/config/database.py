@@ -89,7 +89,8 @@ class Database:
             s_id text PRIMARY KEY,
             s_name text,
             s_course text,
-            s_branch text
+            s_branch text,
+            s_project_id text
         );
         """
         session.execute(student_table_query)
@@ -99,6 +100,12 @@ class Database:
         CREATE INDEX IF NOT EXISTS students_name_idx ON students (s_name);
         """
         session.execute(student_name_index)
+
+        # Index on student project id for fast lookup of students by project
+        student_project_index = """
+        CREATE INDEX IF NOT EXISTS students_project_idx ON students (s_project_id);
+        """
+        session.execute(student_project_index)
 
         print("Tables created")
 

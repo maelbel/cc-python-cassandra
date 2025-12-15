@@ -2,7 +2,7 @@ from cassandra.query import SimpleStatement
 from ..entities.student import Student, StudentCreate, StudentUpdate
 from ..config.database import Database
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 class StudentRepository:
     def __init__(self, db: Database):
@@ -56,10 +56,37 @@ class StudentRepository:
             return Student(s_id=row.s_id, s_name=row.s_name, s_course=row.s_course, s_branch=row.s_branch)
         return None
 
-    def list_students(self) -> List[Student]:
-        query = SimpleStatement("SELECT s_id, s_name, s_course, s_branch FROM students")
-        rows = self._get_session().execute(query)
-        students = []
-        for row in rows:
-            students.append(Student(s_id=row.s_id, s_name=row.s_name, s_course=row.s_course, s_branch=row.s_branch))
-        return students
+    def list_students(self, page: int = 1, size: int = 10, q: Optional[str] = None, project_id: Optional[str] = None) -> Tuple[List[Student], int]:
+        """
+        Return (students, total_estimate). Uses client-side slicing for pagination.
+        q searches by s_id (exact) or s_name (ALLOW FILTERING fallback).
+        """
+        session = self._get_session()
+        limit = page * size
+
+        if project_id:
+            # Prefer direct project lookup using indexed column
+            query = SimpleStatement(f"SELECT s_id, s_name, s_course, s_branch, s_project_id FROM students WHERE s_project_id = %s LIMIT {limit}")
+            rows = session.execute(query, (project_id,))
+        elif q:
+            try:
+                if len(q) >= 32:
+                    query = SimpleStatement("SELECT s_id, s_name, s_course, s_branch FROM students WHERE s_id = %s")
+                    rows = session.execute(query, (q,))
+                    students = [Student(s_id=row.s_id, s_name=row.s_name, s_course=row.s_course, s_branch=row.s_branch) for row in rows]
+                    total = len(students)
+                    start = (page - 1) * size
+                    return students[start:start+size], total
+            except Exception:
+                pass
+
+            query = SimpleStatement(f"SELECT s_id, s_name, s_course, s_branch, s_project_id FROM students WHERE s_name >= %s ALLOW FILTERING LIMIT {limit}")
+            rows = session.execute(query, (q,))
+        else:
+            query = SimpleStatement(f"SELECT s_id, s_name, s_course, s_branch, s_project_id FROM students LIMIT {limit}")
+            rows = session.execute(query)
+
+        students = [Student(s_id=row.s_id, s_name=row.s_name, s_course=row.s_course, s_branch=row.s_branch, s_project_id=getattr(row, 's_project_id', None)) for row in rows]
+        total = len(students)
+        start = (page - 1) * size
+        return students[start:start+size], total
