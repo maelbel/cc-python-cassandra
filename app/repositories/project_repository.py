@@ -63,23 +63,18 @@ class ProjectRepository:
         limit = page * size
 
         if q:
-            # If q looks like a UUID or exact id search, try filtering by p_id first
-            # Otherwise search by p_name using ALLOW FILTERING
             try:
-                # Proper UUID check: try to parse q as a UUID
                 uuid.UUID(q)
                 query = SimpleStatement("SELECT p_id, p_name, p_head FROM projects WHERE p_id = %s")
                 rows = session.execute(query, (q,))
                 projects = [Project(p_id=row.p_id, p_name=row.p_name, p_head=row.p_head) for row in rows]
                 total = len(projects)
-                # apply paging on single-result set
                 start = (page - 1) * size
                 return projects[start:start+size], total
             except (ValueError, AttributeError):
                 pass
 
-            # fallback: search by name using ALLOW FILTERING
-            query = SimpleStatement(f"SELECT p_id, p_name, p_head FROM projects WHERE p_name >= %s ALLOW FILTERING LIMIT {limit}")
+            query = SimpleStatement(f"SELECT p_id, p_name, p_head FROM projects WHERE p_name = %s LIMIT {limit} ALLOW FILTERING")
             rows = session.execute(query, (q,))
         else:
             query = SimpleStatement(f"SELECT p_id, p_name, p_head FROM projects LIMIT {limit}")
@@ -87,7 +82,6 @@ class ProjectRepository:
 
         projects = [Project(p_id=row.p_id, p_name=row.p_name, p_head=row.p_head) for row in rows]
 
-        # Emulate total as number of returned rows (not full table count)
         total = len(projects)
 
         start = (page - 1) * size

@@ -65,12 +65,10 @@ class StudentRepository:
         limit = page * size
 
         if project_id:
-            # Prefer direct project lookup using indexed column
             query = SimpleStatement(f"SELECT s_id, s_name, s_course, s_branch, s_project_id FROM students WHERE s_project_id = %s LIMIT {limit}")
             rows = session.execute(query, (project_id,))
         elif q:
             try:
-                # Proper UUID check: try to parse q as a UUID
                 uuid.UUID(q)
                 query = SimpleStatement("SELECT s_id, s_name, s_course, s_branch FROM students WHERE s_id = %s")
                 rows = session.execute(query, (q,))
@@ -81,13 +79,15 @@ class StudentRepository:
             except (ValueError, AttributeError):
                 pass
 
-            query = SimpleStatement(f"SELECT s_id, s_name, s_course, s_branch, s_project_id FROM students WHERE s_name >= %s ALLOW FILTERING LIMIT {limit}")
+            query = SimpleStatement(f"SELECT s_id, s_name, s_course, s_branch, s_project_id FROM students WHERE s_name = %s LIMIT {limit} ALLOW FILTERING")
             rows = session.execute(query, (q,))
         else:
             query = SimpleStatement(f"SELECT s_id, s_name, s_course, s_branch, s_project_id FROM students LIMIT {limit}")
             rows = session.execute(query)
 
         students = [Student(s_id=row.s_id, s_name=row.s_name, s_course=row.s_course, s_branch=row.s_branch, s_project_id=getattr(row, 's_project_id', None)) for row in rows]
+
         total = len(students)
+
         start = (page - 1) * size
         return students[start:start+size], total
