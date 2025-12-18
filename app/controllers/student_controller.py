@@ -5,7 +5,7 @@ from ..controllers.auth_controller import get_auth_service, get_current_user
 from ..entities.user import User
 from typing import List, Optional, Tuple
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 def get_student_service() -> StudentService:
     from ..main import db
@@ -28,12 +28,12 @@ def list_students(
     )
 
 @router.post("/", response_model=StudentResponse)
-def create_student(student: StudentCreate, service: StudentService = Depends(get_student_service), current_user: User = Depends(get_current_user)):
+def create_student(student: StudentCreate, service: StudentService = Depends(get_student_service)):
     """Create a new student (requires authentication)"""
     return service.create_student(student)
 
 @router.put("/{s_id}", response_model=StudentResponse)
-def update_student(s_id: str, student: StudentUpdate, service: StudentService = Depends(get_student_service), current_user: User = Depends(get_current_user)):
+def update_student(s_id: str, student: StudentUpdate, service: StudentService = Depends(get_student_service)):
     """Update a student (requires authentication)"""
     updated = service.update_student(s_id, student)
     if not updated:
@@ -41,7 +41,7 @@ def update_student(s_id: str, student: StudentUpdate, service: StudentService = 
     return updated
 
 @router.delete("/{s_id}")
-def delete_student(s_id: str, service: StudentService = Depends(get_student_service), current_user: User = Depends(get_current_user)):
+def delete_student(s_id: str, service: StudentService = Depends(get_student_service)):
     """Delete a student (requires authentication)"""
     success = service.delete_student(s_id)
     if not success:
