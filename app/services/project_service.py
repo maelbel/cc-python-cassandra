@@ -19,5 +19,5 @@ class ProjectService:
     def get_project(self, p_id: str) -> Optional[Project]:
         return self.repo.get_project(p_id)
 
-    def list_projects(self) -> List[Project]:
-        return self.repo.list_projects()
+    def list_projects(self, page: int = 1, size: int = 10, q: str | None = None):
+        return self.repo.list_projects(page=page, size=size, q=q)

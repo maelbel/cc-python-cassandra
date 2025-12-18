@@ -2,7 +2,7 @@ from cassandra.query import SimpleStatement
 from ..entities.project import Project, ProjectCreate, ProjectUpdate
 from ..config.database import Database
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 class ProjectRepository:
     def __init__(self, db: Database):
@@ -24,28 +24,23 @@ class ProjectRepository:
         return Project(p_id=project_id, p_name=project.p_name, p_head=project.p_head)
 
     def update_project(self, p_id: str, project: ProjectUpdate) -> Optional[Project]:
-        allowed_columns = {"p_name", "p_head"}
-        pairs = []
+        sets = []
+        params = []
         if project.p_name is not None:
-            pairs.append(("p_name", project.p_name))
+            sets.append("p_name = %s")
+            params.append(project.p_name)
         if project.p_head is not None:
-            pairs.append(("p_head", project.p_head))
-        if not pairs:
+            sets.append("p_head = %s")
+            params.append(project.p_head)
+        if not sets:
             return None
-        for col, _ in pairs:
-            if col not in allowed_columns:
-                raise ValueError(f"Invalid column name: {col}")
-        set_clause = ", ".join(f"{col} = %s" for col, _ in pairs)
-        params = [val for _, val in pairs]
+        set_clause = ", ".join(sets)
+        query = SimpleStatement(f"UPDATE projects SET {set_clause} WHERE p_id = %s")
         params.append(p_id)
-        query = SimpleStatement("UPDATE projects SET " + set_clause + " WHERE p_id = %s")
         self._get_session().execute(query, tuple(params))
         return self.get_project(p_id)
 
     def delete_project(self, p_id: str) -> bool:
-        existing = self.get_project(p_id)
-        if not existing:
-            return False
         query = SimpleStatement("DELETE FROM projects WHERE p_id = %s")
         self._get_session().execute(query, (p_id,))
         return True
@@ -58,10 +53,36 @@ class ProjectRepository:
             return Project(p_id=row.p_id, p_name=row.p_name, p_head=row.p_head)
         return None
 
-    def list_projects(self) -> List[Project]:
-        query = SimpleStatement("SELECT p_id, p_name, p_head FROM projects")
-        rows = self._get_session().execute(query)
-        projects = []
-        for row in rows:
-            projects.append(Project(p_id=row.p_id, p_name=row.p_name, p_head=row.p_head))
-        return projects
+    def list_projects(self, page: int = 1, size: int = 10, q: Optional[str] = None) -> Tuple[List[Project], int]:
+        """
+        Return a tuple of (projects, total_estimate).
+        Note: Cassandra does not support OFFSET; to emulate paging we fetch `page*size` rows and slice client-side.
+        Searching by name uses ALLOW FILTERING which can be inefficient for large datasets.
+        """
+        session = self._get_session()
+        limit = page * size
+
+        if q:
+            try:
+                uuid.UUID(q)
+                query = SimpleStatement("SELECT p_id, p_name, p_head FROM projects WHERE p_id = %s")
+                rows = session.execute(query, (q,))
+                projects = [Project(p_id=row.p_id, p_name=row.p_name, p_head=row.p_head) for row in rows]
+                total = len(projects)
+                start = (page - 1) * size
+                return projects[start:start+size], total
+            except (ValueError, AttributeError):
+                pass
+
+            query = SimpleStatement(f"SELECT p_id, p_name, p_head FROM projects WHERE p_name = %s LIMIT {limit} ALLOW FILTERING")
+            rows = session.execute(query, (q,))
+        else:
+            query = SimpleStatement(f"SELECT p_id, p_name, p_head FROM projects LIMIT {limit}")
+            rows = session.execute(query)
+
+        projects = [Project(p_id=row.p_id, p_name=row.p_name, p_head=row.p_head) for row in rows]
+
+        total = len(projects)
+
+        start = (page - 1) * size
+        return projects[start:start+size], total
