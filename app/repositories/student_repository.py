@@ -70,14 +70,15 @@ class StudentRepository:
             rows = session.execute(query, (project_id,))
         elif q:
             try:
-                if len(q) >= 32:
-                    query = SimpleStatement("SELECT s_id, s_name, s_course, s_branch FROM students WHERE s_id = %s")
-                    rows = session.execute(query, (q,))
-                    students = [Student(s_id=row.s_id, s_name=row.s_name, s_course=row.s_course, s_branch=row.s_branch) for row in rows]
-                    total = len(students)
-                    start = (page - 1) * size
-                    return students[start:start+size], total
-            except Exception:
+                # Proper UUID check: try to parse q as a UUID
+                uuid.UUID(q)
+                query = SimpleStatement("SELECT s_id, s_name, s_course, s_branch FROM students WHERE s_id = %s")
+                rows = session.execute(query, (q,))
+                students = [Student(s_id=row.s_id, s_name=row.s_name, s_course=row.s_course, s_branch=row.s_branch) for row in rows]
+                total = len(students)
+                start = (page - 1) * size
+                return students[start:start+size], total
+            except (ValueError, AttributeError):
                 pass
 
             query = SimpleStatement(f"SELECT s_id, s_name, s_course, s_branch, s_project_id FROM students WHERE s_name >= %s ALLOW FILTERING LIMIT {limit}")

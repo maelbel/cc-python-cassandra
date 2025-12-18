@@ -66,16 +66,16 @@ class ProjectRepository:
             # If q looks like a UUID or exact id search, try filtering by p_id first
             # Otherwise search by p_name using ALLOW FILTERING
             try:
-                # naive UUID check: length and dashes
-                if len(q) >= 32:
-                    query = SimpleStatement("SELECT p_id, p_name, p_head FROM projects WHERE p_id = %s")
-                    rows = session.execute(query, (q,))
-                    projects = [Project(p_id=row.p_id, p_name=row.p_name, p_head=row.p_head) for row in rows]
-                    total = len(projects)
-                    # apply paging on single-result set
-                    start = (page - 1) * size
-                    return projects[start:start+size], total
-            except Exception:
+                # Proper UUID check: try to parse q as a UUID
+                uuid.UUID(q)
+                query = SimpleStatement("SELECT p_id, p_name, p_head FROM projects WHERE p_id = %s")
+                rows = session.execute(query, (q,))
+                projects = [Project(p_id=row.p_id, p_name=row.p_name, p_head=row.p_head) for row in rows]
+                total = len(projects)
+                # apply paging on single-result set
+                start = (page - 1) * size
+                return projects[start:start+size], total
+            except (ValueError, AttributeError):
                 pass
 
             # fallback: search by name using ALLOW FILTERING
