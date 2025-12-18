@@ -16,3 +16,13 @@ The API will be available at: http://127.0.0.1:8000
 Once running, visit:
 - Swagger UI: http://127.0.0.1:8000/docs
 - ReDoc: http://127.0.0.1:8000/redoc
+
+## Authentication
+
+1. Copy `.env.example` to `.env` and set `SECRET_KEY` to a secure random value.
+2. Endpoints:
+	- `POST /auth/register` — register a new user (body: `username`, `email`, `password`).
+	- `POST /auth/login` — obtain an access token using form data (`username`, `password`).
+	- `GET /auth/me` — get current user, requires `Authorization: Bearer <token>` header.
+
+The project uses JWT for tokens and `passlib` for password hashing. See `.env.example` for settings.

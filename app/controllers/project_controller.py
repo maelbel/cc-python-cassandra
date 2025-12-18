@@ -1,20 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from ..services.project_service import ProjectService
-from ..entities.project import ProjectCreate, ProjectUpdate, ProjectResponse, Project, ProjectListResponse
-from ..controllers.auth_controller import get_auth_service, get_current_user
-from ..entities.user import User
-from typing import List, Tuple, Optional
+from ..dependencies import get_db
+from ..entities.project import ProjectCreate, ProjectUpdate, ProjectResponse, ProjectListResponse
+from ..controllers.auth_controller import get_current_user
+from typing import Optional
 from ..services.student_service import StudentService
 from ..entities.student import StudentListResponse, StudentResponse
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
-def get_project_service() -> ProjectService:
-    from ..main import db
+def get_project_service(db=Depends(get_db)) -> ProjectService:
     return ProjectService(db)
 
-def get_student_service() -> StudentService:
-    from ..main import db
+def get_student_service(db=Depends(get_db)) -> StudentService:
     return StudentService(db)
 
 @router.get("/", response_model=ProjectListResponse)
@@ -27,7 +25,7 @@ def list_projects(
     """List projects with pagination and optional search"""
     items, total = service.list_projects(page=page, size=size, q=q)
     return ProjectListResponse(
-        items=[ProjectResponse(**p.model_dump()) for p in items],
+        items=items,
         total=total,
         page=page,
         size=size,
@@ -42,16 +40,12 @@ def create_project(project: ProjectCreate, service: ProjectService = Depends(get
 def update_project(p_id: str, project: ProjectUpdate, service: ProjectService = Depends(get_project_service)):
     """Update a project (requires authentication)"""
     updated = service.update_project(p_id, project)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Project not found or no changes provided")
     return updated
 
 @router.delete("/{p_id}")
 def delete_project(p_id: str, service: ProjectService = Depends(get_project_service)):
     """Delete a project (requires authentication)"""
-    success = service.delete_project(p_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Project not found")
+    service.delete_project(p_id)
     return {"message": "Project deleted"}
 
 
@@ -66,7 +60,7 @@ def list_project_students(
     """List students for a given project with pagination and optional search"""
     items, total = service.list_students(page=page, size=size, q=q, project_id=p_id)
     return StudentListResponse(
-        items=[StudentResponse(**s.model_dump()) for s in items],
+        items=items,
         total=total,
         page=page,
         size=size,

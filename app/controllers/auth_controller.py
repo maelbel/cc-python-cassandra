@@ -2,12 +2,13 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from ..entities.user import UserCreate, Token, User, UserResponse
 from ..services.auth_service import AuthService
+from ..dependencies import get_db
+from ..config.security import settings
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-def get_auth_service() -> AuthService:
-    from ..main import db
+def get_auth_service(db=Depends(get_db)) -> AuthService:
     return AuthService(db)
 
 def get_current_user(token: str = Depends(oauth2_scheme), auth_service: AuthService = Depends(get_auth_service)) -> User:
