@@ -3,7 +3,6 @@ import os
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-# Ensure .env is loaded if present
 load_dotenv()
 
 
@@ -21,7 +20,6 @@ class SecuritySettings:
             self.access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
         except ValueError:
             self.access_token_expire_minutes = 60
-        # comma-separated origins
         self.allowed_origins: list[str] = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",") if o.strip()]
 
 
@@ -37,7 +35,6 @@ def is_default_secret() -> bool:
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response: Response = await call_next(request)
-        # Basic protective headers
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("Referrer-Policy", "no-referrer")

@@ -11,3 +11,8 @@ class NotFoundError(AppError):
 class ConflictError(AppError):
     """Raised when an operation conflicts with current state (e.g., duplicate)."""
     pass
+
+
+class DatabaseError(AppError):
+    """Raised for database-related errors (connection, session, etc.)."""
+    pass

@@ -13,10 +13,9 @@ from .controllers.student_controller import router as student_router
 from .config.security import settings, is_default_secret, SecurityHeadersMiddleware
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from .exceptions import AppError, NotFoundError, ConflictError
+from .exceptions import AppError, NotFoundError, ConflictError, DatabaseError
 
 db = None
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -29,8 +28,6 @@ async def lifespan(app: FastAPI):
     if db:
         db.close()
 
-
-# Basic logging configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("app")
 
@@ -44,14 +41,21 @@ app = FastAPI(
 
 @app.exception_handler(AppError)
 async def app_error_handler(request: Request, exc: AppError):
+    logger.exception("Application error handled: %s", exc)
     if isinstance(exc, NotFoundError):
         return JSONResponse(status_code=404, content={"detail": str(exc) or "Not found"})
     if isinstance(exc, ConflictError):
         return JSONResponse(status_code=409, content={"detail": str(exc) or "Conflict"})
+    if isinstance(exc, DatabaseError):
+        return JSONResponse(status_code=500, content={"detail": str(exc) or "Database error"})
     return JSONResponse(status_code=400, content={"detail": str(exc) or "Application error"})
 
 
-# CORS setup: read allowed origins from env or default to localhost 3000
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled exception: %s", exc)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
 allowed_origins = os.getenv("ALLOWED_ORIGINS")
 if allowed_origins:
     origins = [o.strip() for o in allowed_origins.split(",") if o.strip()]
