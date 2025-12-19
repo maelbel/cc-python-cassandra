@@ -1,12 +1,22 @@
+"""Database wrapper for Cassandra cluster and schema management.
+
+This class is a thin helper used by the application to:
+- create/connect to a Cassandra cluster and session,
+- ensure the required keyspace and tables exist,
+- provide a `get_session()` method used by repositories.
+
+The implementation is intentionally simple and synchronous; it is
+suitable for development and testing but would need improvements for
+production use (robust configuration, async support, connection
+pooling, and better error handling).
+"""
+
 from cassandra.cluster import Cluster
-from cassandra.auth import PlainTextAuthProvider
-from cassandra.query import SimpleStatement
-import uuid
-from datetime import date
-from contextlib import closing
 import time
 
 class Database:
+    """Manage Cassandra cluster connection and schema creation."""
+
     def __init__(self, contact_points, keyspace):
         self.contact_points = contact_points
         self.keyspace = keyspace
@@ -15,12 +25,14 @@ class Database:
         self.connect()
 
     def connect(self):
+        """Connect to the Cassandra cluster and ensure keyspace/tables exist."""
         self.cluster = Cluster(self.contact_points)
         self.session = self.cluster.connect()
         self.create_keyspace()
         print("Connected to Cassandra")
 
     def close(self):
+        """Shutdown session and cluster connections."""
         if self.session:
             self.session.shutdown()
         if self.cluster:
@@ -28,6 +40,7 @@ class Database:
         print("Connection closed")
 
     def create_keyspace(self):
+        """Create the application keyspace and call `create_tables`."""
         query = f"""
         CREATE KEYSPACE IF NOT EXISTS {self.keyspace}
         WITH REPLICATION = {{ 'class' : 'SimpleStrategy', 'replication_factor' : 1 }};
@@ -42,6 +55,7 @@ class Database:
         print(f"Keyspace {self.keyspace} created or already exists")
 
     def create_tables(self):
+        """Create application tables and secondary indexes if missing."""
         session = self.get_session()
         
         # Create users table
@@ -110,6 +124,11 @@ class Database:
         print("Tables created")
 
     def get_session(self):
+        """Return an active session, attempting reconnection if necessary.
+
+        The method will try to reconnect up to a few times if the session
+        is not available, raising a `RuntimeError` on persistent failure.
+        """
         if self.session is None:
             print("WARNING: Session is None, attempting to reconnect...")
             max_retries = 5

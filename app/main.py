@@ -1,3 +1,11 @@
+"""Application entrypoint and FastAPI app configuration.
+
+This module configures the FastAPI application, exception handlers,
+middlewares and registers routers. A lifecycle context manager is used
+to initialize a `Database` wrapper during startup and close it on
+shutdown.
+"""
+
 from typing import Union
 from contextlib import asynccontextmanager
 
@@ -17,8 +25,15 @@ from .exceptions import AppError, NotFoundError, ConflictError, DatabaseError
 
 db = None
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Startup/shutdown lifecycle: initialize `db` and close on exit.
+
+    The database contact points and keyspace are hard-coded here; in a
+    production setup these would come from configuration or environment
+    variables.
+    """
     global db
 
     contact_points = ['cassandra']

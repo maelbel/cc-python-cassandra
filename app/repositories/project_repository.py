@@ -1,3 +1,5 @@
+"""Repository implementation for project CRUD operations using Cassandra."""
+
 from cassandra.query import SimpleStatement
 from ..entities.project import Project, ProjectCreate, ProjectUpdate
 from ..config.database import Database
@@ -6,6 +8,8 @@ from typing import List, Optional, Tuple
 from .base import BaseRepository
 
 class ProjectRepository(BaseRepository):
+    """Encapsulates Cassandra queries for the `projects` table."""
+
     def __init__(self, db: Database):
         super().__init__(db)
         self.table = "projects"
@@ -13,6 +17,7 @@ class ProjectRepository(BaseRepository):
         self.prefix = "p"
 
     def create_project(self, project: ProjectCreate) -> Project:
+        """Insert a new project and return the created `Project` model."""
         project_id = str(uuid.uuid4())
         query = SimpleStatement("""
         INSERT INTO projects (p_id, p_name, p_head)
@@ -22,6 +27,10 @@ class ProjectRepository(BaseRepository):
         return Project(p_id=project_id, p_name=project.p_name, p_head=project.p_head)
 
     def update_project(self, p_id: str, project: ProjectUpdate) -> Optional[Project]:
+        """Apply partial updates to a project and return the updated model.
+
+        Returns `None` when the provided `project` contains no changes.
+        """
         sets = []
         params = []
         if project.p_name is not None:
@@ -39,11 +48,13 @@ class ProjectRepository(BaseRepository):
         return self.get_project(p_id)
 
     def delete_project(self, p_id: str) -> bool:
+        """Delete the project with the given id. Returns True on success."""
         query = SimpleStatement("DELETE FROM projects WHERE p_id = %s")
         self._get_session().execute(query, (p_id,))
         return True
 
     def get_project(self, p_id: str) -> Optional[Project]:
+        """Fetch a single project by id and return a `Project` model or None."""
         query = SimpleStatement("SELECT p_id, p_name, p_head FROM projects WHERE p_id = %s")
         result = self._get_session().execute(query, (p_id,))
         row = result.one()
@@ -52,6 +63,10 @@ class ProjectRepository(BaseRepository):
         return None
 
     def list_projects(self, page: int = 1, size: int = 10, q: Optional[str] = None) -> Tuple[List[Project], int]:
+        """Return a paginated list of projects and the total count.
+
+        Search by `q` is delegated to `BaseRepository.list_with_search`.
+        """
         rows, total = self.list_with_search(
             page=page,
             size=size,

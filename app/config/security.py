@@ -1,10 +1,17 @@
+"""Security-related settings and simple middleware helpers.
+
+This module exposes `settings` with basic JWT settings loaded from the
+environment, a helper `is_default_secret()` used to warn when the
+SECRET_KEY is insecure, and `SecurityHeadersMiddleware` which adds a few
+HTTP headers to responses.
+"""
+
 from dotenv import load_dotenv
 import os
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 load_dotenv()
-
 
 class SecuritySettings:
     """Lightweight settings loader that reads from environment variables.

@@ -26,3 +26,19 @@ Once running, visit:
 	- `GET /auth/me` — get current user, requires `Authorization: Bearer <token>` header.
 
 The project uses JWT for tokens and `passlib` for password hashing. See `.env.example` for settings.
+
+## Documentation du code
+
+ - **Structure**: le code est organisé en package `app` avec les sous-modules:
+	 - `entities`: modèles Pydantic pour validation/serialisation.
+	 - `repositories`: accès à Cassandra (réutilisent `BaseRepository`).
+	 - `services`: logique métier (transforme les entités et appelle les repositories).
+	 - `controllers`: routes FastAPI (dépendances, validation, réponses).
+	 - `config`: configuration de la base de données et sécurité.
+
+ - **Exécuter les tests**: si vous avez `pytest` installé, lancez:
+
+```bash
+pip install -r requirements.txt
+pytest -q
+```
