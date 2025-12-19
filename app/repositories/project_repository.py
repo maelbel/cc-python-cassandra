@@ -3,16 +3,14 @@ from ..entities.project import Project, ProjectCreate, ProjectUpdate
 from ..config.database import Database
 import uuid
 from typing import List, Optional, Tuple
+from .base import BaseRepository
 
-class ProjectRepository:
+class ProjectRepository(BaseRepository):
     def __init__(self, db: Database):
-        self.db = db
-
-    def _get_session(self):
-        session = self.db.get_session()
-        if session is None:
-            raise RuntimeError("Database session is not available")
-        return session
+        super().__init__(db)
+        self.table = "projects"
+        self.select_cols = "p_id, p_name, p_head"
+        self.prefix = "p"
 
     def create_project(self, project: ProjectCreate) -> Project:
         project_id = str(uuid.uuid4())
@@ -54,35 +52,13 @@ class ProjectRepository:
         return None
 
     def list_projects(self, page: int = 1, size: int = 10, q: Optional[str] = None) -> Tuple[List[Project], int]:
-        """
-        Return a tuple of (projects, total_estimate).
-        Note: Cassandra does not support OFFSET; to emulate paging we fetch `page*size` rows and slice client-side.
-        Searching by name uses ALLOW FILTERING which can be inefficient for large datasets.
-        """
-        session = self._get_session()
-        limit = page * size
-
-        if q:
-            try:
-                uuid.UUID(q)
-                query = SimpleStatement("SELECT p_id, p_name, p_head FROM projects WHERE p_id = %s")
-                rows = session.execute(query, (q,))
-                projects = [Project(p_id=row.p_id, p_name=row.p_name, p_head=row.p_head) for row in rows]
-                total = len(projects)
-                start = (page - 1) * size
-                return projects[start:start+size], total
-            except (ValueError, AttributeError):
-                pass
-
-            query = SimpleStatement(f"SELECT p_id, p_name, p_head FROM projects WHERE p_name = %s LIMIT {limit} ALLOW FILTERING")
-            rows = session.execute(query, (q,))
-        else:
-            query = SimpleStatement(f"SELECT p_id, p_name, p_head FROM projects LIMIT {limit}")
-            rows = session.execute(query)
+        rows, total = self.list_with_search(
+            page=page,
+            size=size,
+            q=q,
+            filters=None,
+        )
 
         projects = [Project(p_id=row.p_id, p_name=row.p_name, p_head=row.p_head) for row in rows]
 
-        total = len(projects)
-
-        start = (page - 1) * size
-        return projects[start:start+size], total
+        return projects, total

@@ -3,16 +3,14 @@ from ..entities.student import Student, StudentCreate, StudentUpdate
 from ..config.database import Database
 import uuid
 from typing import List, Optional, Tuple
+from .base import BaseRepository
 
-class StudentRepository:
+class StudentRepository(BaseRepository):
     def __init__(self, db: Database):
-        self.db = db
-
-    def _get_session(self):
-        session = self.db.get_session()
-        if session is None:
-            raise RuntimeError("Database session is not available")
-        return session
+        super().__init__(db)
+        self.table = "students"
+        self.select_cols = "s_id, s_name, s_course, s_branch, s_project_id"
+        self.prefix = "s"
 
     def create_student(self, student: StudentCreate) -> Student:
         student_id = str(uuid.uuid4())
@@ -60,37 +58,17 @@ class StudentRepository:
         return None
 
     def list_students(self, page: int = 1, size: int = 10, q: Optional[str] = None, project_id: Optional[str] = None) -> Tuple[List[Student], int]:
-        """
-        Return (students, total_estimate). Uses client-side slicing for pagination.
-        q searches by s_id (exact) or s_name (ALLOW FILTERING fallback).
-        """
-        session = self._get_session()
-        limit = page * size
-
+        filters = None
         if project_id:
-            query = SimpleStatement(f"SELECT s_id, s_name, s_course, s_branch, s_project_id FROM students WHERE s_project_id = %s LIMIT {limit}")
-            rows = session.execute(query, (project_id,))
-        elif q:
-            try:
-                uuid.UUID(q)
-                query = SimpleStatement("SELECT s_id, s_name, s_course, s_branch FROM students WHERE s_id = %s")
-                rows = session.execute(query, (q,))
-                students = [Student(s_id=row.s_id, s_name=row.s_name, s_course=row.s_course, s_branch=row.s_branch) for row in rows]
-                total = len(students)
-                start = (page - 1) * size
-                return students[start:start+size], total
-            except (ValueError, AttributeError):
-                pass
+            filters = {"s_project_id": project_id}
 
-            query = SimpleStatement(f"SELECT s_id, s_name, s_course, s_branch, s_project_id FROM students WHERE s_name = %s LIMIT {limit} ALLOW FILTERING")
-            rows = session.execute(query, (q,))
-        else:
-            query = SimpleStatement(f"SELECT s_id, s_name, s_course, s_branch, s_project_id FROM students LIMIT {limit}")
-            rows = session.execute(query)
+        rows, total = self.list_with_search(
+            page=page,
+            size=size,
+            q=q,
+            filters=filters,
+        )
 
         students = [Student(s_id=row.s_id, s_name=row.s_name, s_course=row.s_course, s_branch=row.s_branch, s_project_id=getattr(row, 's_project_id', None)) for row in rows]
 
-        total = len(students)
-
-        start = (page - 1) * size
-        return students[start:start+size], total
+        return students, total
